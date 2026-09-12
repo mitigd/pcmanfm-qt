@@ -90,7 +90,9 @@ public:
     void addTab(Fm::FilePath path);
 
     TabPage* currentPage(ViewFrame* viewFrame) {
-        return reinterpret_cast<TabPage*>(viewFrame->getStackedWidget()->currentWidget());
+        return (viewFrame && viewFrame->getStackedWidget())
+            ? reinterpret_cast<TabPage*>(viewFrame->getStackedWidget()->currentWidget())
+            : nullptr;
     }
     TabPage* currentPage() {
         return currentPage(activeViewFrame_);
@@ -259,6 +261,7 @@ private:
     void updateViewMenuForCurrentPage();
     void updateSelectedActions();
     void updateStatusBarForCurrentPage();
+    void updateSidePanes();
     void setRTLIcons(bool isRTL);
     void createPathBar(bool usePathButtons);
     void addViewFrame(const Fm::FilePath& path);

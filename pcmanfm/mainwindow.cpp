@@ -28,6 +28,7 @@
 #include <QVBoxLayout>
 #include <QMessageBox>
 #include <QSplitter>
+#include <QComboBox>
 #include <QToolButton>
 #include <QShortcut>
 #include <QKeySequence>
@@ -178,12 +179,8 @@ MainWindow::MainWindow(Fm::FilePath path):
     ui.actionApplications->setIcon(QIcon::fromTheme(QStringLiteral("system-software-install"),
         QIcon::fromTheme(QStringLiteral("applications-accessories"))));
 
-    // side pane
-    ui.sidePane->setVisible(settings.isSidePaneVisible());
-    ui.actionSidePane->setChecked(settings.isSidePaneVisible());
+    // side panes
     ui.sidePane->setIconSize(QSize(settings.sidePaneIconSize(), settings.sidePaneIconSize()));
-    ui.sidePane->setMode(settings.sidePaneMode());
-    ui.sidePane->restoreHiddenPlaces(settings.getHiddenPlaces());
     connect(ui.sidePane, &Fm::SidePane::chdirRequested, this, &MainWindow::onSidePaneChdirRequested);
     connect(ui.sidePane, &Fm::SidePane::openFolderInNewWindowRequested, this, &MainWindow::onSidePaneOpenFolderInNewWindowRequested);
     connect(ui.sidePane, &Fm::SidePane::openFolderInNewTabRequested, this, &MainWindow::onSidePaneOpenFolderInNewTabRequested);
@@ -191,6 +188,14 @@ MainWindow::MainWindow(Fm::FilePath path):
     connect(ui.sidePane, &Fm::SidePane::createNewFolderRequested, this, &MainWindow::onSidePaneCreateNewFolderRequested);
     connect(ui.sidePane, &Fm::SidePane::modeChanged, this, &MainWindow::onSidePaneModeChanged);
     connect(ui.sidePane, &Fm::SidePane::hiddenPlaceSet, this, &MainWindow::onSettingHiddenPlace);
+
+    ui.rightSidePane->setIconSize(QSize(settings.sidePaneIconSize(), settings.sidePaneIconSize()));
+    connect(ui.rightSidePane, &Fm::SidePane::chdirRequested, this, &MainWindow::onSidePaneChdirRequested);
+    connect(ui.rightSidePane, &Fm::SidePane::openFolderInNewWindowRequested, this, &MainWindow::onSidePaneOpenFolderInNewWindowRequested);
+    connect(ui.rightSidePane, &Fm::SidePane::openFolderInNewTabRequested, this, &MainWindow::onSidePaneOpenFolderInNewTabRequested);
+    connect(ui.rightSidePane, &Fm::SidePane::openFolderInTerminalRequested, this, &MainWindow::onSidePaneOpenFolderInTerminalRequested);
+    connect(ui.rightSidePane, &Fm::SidePane::createNewFolderRequested, this, &MainWindow::onSidePaneCreateNewFolderRequested);
+    connect(ui.rightSidePane, &Fm::SidePane::hiddenPlaceSet, this, &MainWindow::onSettingHiddenPlace);
 
     // detect change of splitter position
     connect(ui.splitter, &QSplitter::splitterMoved, this, &MainWindow::onSplitterMoved);
@@ -226,12 +231,8 @@ MainWindow::MainWindow(Fm::FilePath path):
     });
     ui.statusbar->addPermanentWidget(searchStopButton_);
 
-    // setup the splitter
-    ui.splitter->setStretchFactor(1, 1); // only the right pane can be stretched
-    QList<int> sizes;
-    sizes.append(settings.splitterPos());
-    sizes.append(300);
-    ui.splitter->setSizes(sizes);
+    // setup the splitter and side panes
+    updateSidePanes();
 
     // load bookmark menu
     connect(bookmarks_.get(), &Fm::Bookmarks::changed, this, &MainWindow::onBookmarksChanged);
@@ -331,7 +332,13 @@ MainWindow::MainWindow(Fm::FilePath path):
 
     shortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Escape), this);
     connect(shortcut, &QShortcut::activated, [this] {
-        if(ui.sidePane->isVisible() && ui.sidePane->view()) {
+        if(ui.sidePane->isVisible() && ui.sidePane->view() && !ui.sidePane->view()->hasFocus()) {
+            ui.sidePane->view()->setFocus();
+        }
+        else if(ui.rightSidePane->isVisible() && ui.rightSidePane->view() && !ui.rightSidePane->view()->hasFocus()) {
+            ui.rightSidePane->view()->setFocus();
+        }
+        else if(ui.sidePane->isVisible() && ui.sidePane->view()) {
             ui.sidePane->view()->setFocus();
         }
     });
@@ -1334,7 +1341,8 @@ void MainWindow::onTabBarTabMoved(int from, int to) {
 void MainWindow::onFolderUnmounted() {
     TabPage* tabPage = static_cast<TabPage*>(sender());
     if(ViewFrame* viewFrame = viewFrameForTabPage(tabPage)) {
-        const QList<MountOperation*> ops = ui.sidePane->findChildren<MountOperation*>();
+        QList<MountOperation*> ops = ui.sidePane->findChildren<MountOperation*>();
+        ops.append(ui.rightSidePane->findChildren<MountOperation*>());
         if(ops.isEmpty()) { // unmounting is done somewhere else
             Settings& settings = static_cast<Application*>(qApp)->settings();
             if(settings.closeOnUnmount()) {
@@ -1353,7 +1361,8 @@ void MainWindow::onFolderUnmounted() {
         else { // wait for all (un-)mount operations to be finished (otherwise, they might be cancelled)
             for(const MountOperation* op : ops) {
                 connect(op, &QObject::destroyed, tabPage, [this, tabPage, viewFrame] {
-                    if(ui.sidePane->findChildren<MountOperation*>().isEmpty()) {
+                    if(ui.sidePane->findChildren<MountOperation*>().isEmpty()
+                       && ui.rightSidePane->findChildren<MountOperation*>().isEmpty()) {
                         Settings& settings = static_cast<Application*>(qApp)->settings();
                         if(settings.closeOnUnmount()) {
                             viewFrame->getStackedWidget()->removeWidget(tabPage);
@@ -1611,9 +1620,13 @@ void MainWindow::updateUIForCurrentPage(bool setFocus) {
             tabPage->folderView()->childView()->setFocus();
         }
 
-        // update side pane
+        // update side panes
         ui.sidePane->setCurrentPath(tabPage->path());
         ui.sidePane->setShowHidden(tabPage->showHidden());
+        if(ui.rightSidePane->isVisible()) {
+            ui.rightSidePane->setCurrentPath(tabPage->path());
+            ui.rightSidePane->setShowHidden(tabPage->showHidden());
+        }
 
         // update back/forward/up toolbar buttons
         ui.actionGoUp->setEnabled(tabPage->canUp());
@@ -1768,6 +1781,9 @@ void MainWindow::onTabPageSortFilterChanged() { // NOTE: This may be called from
     if(tabPage == currentPage()) {
         updateViewMenuForCurrentPage();
         ui.sidePane->setShowHidden(tabPage->showHidden());
+        if(ui.rightSidePane->isVisible()) {
+            ui.rightSidePane->setShowHidden(tabPage->showHidden());
+        }
         if(!tabPage->hasCustomizedView() && !tabPage->hasInheritedCustomizedView()) { // remember sort settings globally
             Settings& settings = static_cast<Application*>(qApp)->settings();
             settings.setSortColumn(static_cast<Fm::FolderModel::ColumnId>(tabPage->sortColumn()));
@@ -1812,22 +1828,41 @@ void MainWindow::onSidePaneCreateNewFolderRequested(const Fm::FilePath &path) {
 }
 
 void MainWindow::onSidePaneModeChanged(Fm::SidePane::Mode mode) {
-    static_cast<Application*>(qApp)->settings().setSidePaneMode(mode);
+    if(!static_cast<Application*>(qApp)->settings().dualSidePanes()) {
+        static_cast<Application*>(qApp)->settings().setSidePaneMode(mode);
+    }
 }
 
 void MainWindow::onSettingHiddenPlace(const QString& str, bool hide) {
-    static_cast<Application*>(qApp)->settings().setHiddenPlace(str, hide);
+    Settings& settings = static_cast<Application*>(qApp)->settings();
+    settings.setHiddenPlace(str, hide);
+    if(settings.dualSidePanes()) {
+        ui.sidePane->restoreHiddenPlaces(settings.getHiddenPlaces());
+        ui.rightSidePane->restoreHiddenPlaces(settings.getHiddenPlaces());
+    }
 }
 
 void MainWindow::on_actionSidePane_triggered(bool checked) {
     Application* app = static_cast<Application*>(qApp);
     app->settings().showSidePane(checked);
     ui.sidePane->setVisible(checked);
+    if(app->settings().dualSidePanes()) {
+        ui.rightSidePane->setVisible(checked);
+    }
 }
 
 void MainWindow::onSplitterMoved(int pos, int /*index*/) {
     Application* app = static_cast<Application*>(qApp);
-    app->settings().setSplitterPos(pos);
+    if(app->settings().dualSidePanes() && ui.rightSidePane->isVisible()) {
+        QList<int> sizes = ui.splitter->sizes();
+        if(sizes.size() >= 3) {
+            app->settings().setSplitterPos(sizes.at(0));
+            app->settings().setRightSplitterPos(sizes.at(2));
+        }
+    }
+    else {
+        app->settings().setSplitterPos(pos);
+    }
 }
 
 void MainWindow::loadBookmarksMenu() {
@@ -2231,6 +2266,85 @@ void MainWindow::setTabIcon(TabPage* tabPage) {
     }
 }
 
+void MainWindow::updateSidePanes() {
+    Settings& settings = static_cast<Application*>(qApp)->settings();
+    bool dual = settings.dualSidePanes();
+    bool visible = settings.isSidePaneVisible();
+
+    ui.actionSidePane->setChecked(visible);
+
+    if(dual) {
+        // Left side pane: Directory Tree
+        if(auto combo = ui.sidePane->findChild<QComboBox*>()) {
+            combo->hide();
+        }
+        ui.sidePane->setMode(Fm::SidePane::ModeDirTree);
+        ui.sidePane->setVisible(visible);
+
+        // Right side pane: Lists (Places)
+        if(auto combo = ui.rightSidePane->findChild<QComboBox*>()) {
+            combo->hide();
+        }
+        ui.rightSidePane->setMode(Fm::SidePane::ModePlaces);
+        ui.rightSidePane->restoreHiddenPlaces(settings.getHiddenPlaces());
+        ui.rightSidePane->setVisible(visible);
+
+        if(TabPage* tabPage = currentPage()) {
+            ui.sidePane->setCurrentPath(tabPage->path());
+            ui.sidePane->setShowHidden(tabPage->showHidden());
+            ui.rightSidePane->setCurrentPath(tabPage->path());
+            ui.rightSidePane->setShowHidden(tabPage->showHidden());
+        }
+
+        ui.splitter->setStretchFactor(0, 0);
+        ui.splitter->setStretchFactor(1, 1);
+        ui.splitter->setStretchFactor(2, 0);
+
+        if(visible) {
+            int left = settings.splitterPos();
+            int right = settings.rightSplitterPos();
+            int total = ui.splitter->width();
+            if(total <= 0) {
+                total = width();
+            }
+            int center = qMax(50, total - left - right);
+            QList<int> sizes;
+            sizes << left << center << right;
+            ui.splitter->setSizes(sizes);
+        }
+    }
+    else {
+        // Single sidebar mode
+        ui.rightSidePane->setVisible(false);
+
+        if(auto combo = ui.sidePane->findChild<QComboBox*>()) {
+            combo->show();
+        }
+        ui.sidePane->setMode(settings.sidePaneMode());
+        ui.sidePane->restoreHiddenPlaces(settings.getHiddenPlaces());
+        ui.sidePane->setVisible(visible);
+
+        if(TabPage* tabPage = currentPage()) {
+            ui.sidePane->setCurrentPath(tabPage->path());
+            ui.sidePane->setShowHidden(tabPage->showHidden());
+        }
+
+        ui.splitter->setStretchFactor(0, 0);
+        ui.splitter->setStretchFactor(1, 1);
+
+        if(visible) {
+            int left = settings.splitterPos();
+            int total = ui.splitter->width();
+            if(total <= 0) {
+                total = width();
+            }
+            QList<int> sizes;
+            sizes << left << qMax(50, total - left) << 0;
+            ui.splitter->setSizes(sizes);
+        }
+    }
+}
+
 void MainWindow::updateFromSettings(Settings& settings) {
     // apply settings
 
@@ -2238,8 +2352,10 @@ void MainWindow::updateFromSettings(Settings& settings) {
     ui.actionDelete->setText(settings.useTrash() ? tr("&Move to Trash") : tr("&Delete"));
     ui.actionDelete->setIcon(settings.useTrash() ? QIcon::fromTheme(QStringLiteral("user-trash")) : QIcon::fromTheme(QStringLiteral("edit-delete")));
 
-    // side pane
+    // side panes
     ui.sidePane->setIconSize(QSize(settings.sidePaneIconSize(), settings.sidePaneIconSize()));
+    ui.rightSidePane->setIconSize(QSize(settings.sidePaneIconSize(), settings.sidePaneIconSize()));
+    updateSidePanes();
 
     // recent files
     int recentNumber = settings.getRecentFilesNumber();

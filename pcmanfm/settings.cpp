@@ -99,6 +99,8 @@ Settings::Settings():
     splitterPos_(120),
     sidePaneVisible_(true),
     sidePaneMode_(Fm::SidePane::ModePlaces),
+    dualSidePanes_(false),
+    rightSplitterPos_(200),
     showMenuBar_(true),
     splitView_(false),
     viewMode_(Fm::FolderView::IconMode),
@@ -361,6 +363,8 @@ bool Settings::loadFile(QString filePath) {
     splitterPos_ = settings.value(QStringLiteral("SplitterPos"), 150).toInt();
     sidePaneVisible_ = settings.value(QStringLiteral("SidePaneVisible"), true).toBool();
     sidePaneMode_ = sidePaneModeFromString(settings.value(QStringLiteral("SidePaneMode")).toString());
+    dualSidePanes_ = settings.value(QStringLiteral("DualSidePanes"), false).toBool();
+    rightSplitterPos_ = settings.value(QStringLiteral("RightSplitterPos"), 200).toInt();
     showMenuBar_ = settings.value(QStringLiteral("ShowMenuBar"), true).toBool();
     splitView_ = settings.value(QStringLiteral("SplitView"), false).toBool();
     pathBarButtons_ = settings.value(QStringLiteral("PathBarButtons"), true).toBool();
@@ -529,6 +533,8 @@ bool Settings::saveFile(QString filePath) {
     settings.setValue(QStringLiteral("SplitterPos"), splitterPos_);
     settings.setValue(QStringLiteral("SidePaneVisible"), sidePaneVisible_);
     settings.setValue(QStringLiteral("SidePaneMode"), QString::fromUtf8(sidePaneModeToString(sidePaneMode_)));
+    settings.setValue(QStringLiteral("DualSidePanes"), dualSidePanes_);
+    settings.setValue(QStringLiteral("RightSplitterPos"), rightSplitterPos_);
     settings.setValue(QStringLiteral("ShowMenuBar"), showMenuBar_);
     settings.setValue(QStringLiteral("SplitView"), splitView_);
     settings.setValue(QStringLiteral("PathBarButtons"), pathBarButtons_);

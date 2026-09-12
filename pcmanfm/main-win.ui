@@ -48,6 +48,14 @@
         <enum>Qt::Horizontal</enum>
        </property>
       </widget>
+      <widget class="Fm::SidePane" name="rightSidePane" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
      </widget>
     </item>
    </layout>

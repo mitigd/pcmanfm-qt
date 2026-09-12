@@ -206,6 +206,7 @@ void PreferencesDialog::initUiPage(Settings& settings) {
     ui.rememberWindowSize->setChecked(settings.rememberWindowSize());
     ui.fixedWindowWidth->setValue(settings.fixedWindowWidth());
     ui.fixedWindowHeight->setValue(settings.fixedWindowHeight());
+    ui.dualSidePanes->setChecked(settings.dualSidePanes());
 }
 
 void PreferencesDialog::initBehaviorPage(Settings& settings) {
@@ -413,6 +414,7 @@ void PreferencesDialog::applyUiPage(Settings& settings) {
     settings.setRememberWindowSize(ui.rememberWindowSize->isChecked());
     settings.setFixedWindowWidth(ui.fixedWindowWidth->value());
     settings.setFixedWindowHeight(ui.fixedWindowHeight->value());
+    settings.setDualSidePanes(ui.dualSidePanes->isChecked());
 }
 
 void PreferencesDialog::applyBehaviorPage(Settings& settings) {

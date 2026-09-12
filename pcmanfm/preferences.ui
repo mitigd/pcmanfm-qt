@@ -539,7 +539,7 @@ A space is also reserved for 3 lines of text.</string>
         </layout>
        </widget>
        <widget class="QWidget" name="uiPage">
-        <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,1">
+        <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0,1">
          <item>
           <widget class="QGroupBox" name="groupBox_5">
            <property name="title">
@@ -613,6 +613,25 @@ only if there are more than one tab.</string>
              <widget class="QCheckBox" name="reopenLastTabs">
               <property name="text">
                <string>Reopen last window tabs in a new window</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBoxSidePane">
+           <property name="title">
+            <string>Side Pane</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayoutSidePane">
+            <item>
+             <widget class="QCheckBox" name="dualSidePanes">
+              <property name="toolTip">
+               <string>Show Directory Tree in the left sidebar and Lists in the right sidebar</string>
+              </property>
+              <property name="text">
+               <string>Dual sidebars (Directory Tree on left, Lists on right)</string>
               </property>
              </widget>
             </item>

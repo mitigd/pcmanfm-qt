@@ -593,6 +593,22 @@ public:
         sidePaneMode_ = sidePaneMode;
     }
 
+    bool dualSidePanes() const {
+        return dualSidePanes_;
+    }
+
+    void setDualSidePanes(bool dualSidePanes) {
+        dualSidePanes_ = dualSidePanes;
+    }
+
+    int rightSplitterPos() const {
+        return rightSplitterPos_;
+    }
+
+    void setRightSplitterPos(int rightSplitterPos) {
+        rightSplitterPos_ = rightSplitterPos;
+    }
+
     bool showMenuBar() const {
         return showMenuBar_;
     }
@@ -1147,6 +1163,8 @@ private:
     int splitterPos_;
     bool sidePaneVisible_;
     Fm::SidePane::Mode sidePaneMode_;
+    bool dualSidePanes_;
+    int rightSplitterPos_;
     bool showMenuBar_;
     bool splitView_;
 
