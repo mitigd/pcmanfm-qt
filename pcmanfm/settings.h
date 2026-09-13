@@ -482,6 +482,14 @@ public:
         switchToNewTab_ = showTabClose;
     }
 
+    bool sameTabWidth() const {
+        return sameTabWidth_;
+    }
+
+    void setSameTabWidth(bool sameTabWidth) {
+        sameTabWidth_ = sameTabWidth;
+    }
+
     bool reopenLastTabs() const {
         return reopenLastTabs_;
     }
@@ -1151,6 +1159,7 @@ private:
     bool alwaysShowTabs_;
     bool showTabClose_;
     bool switchToNewTab_;
+    bool sameTabWidth_;
     bool reopenLastTabs_;
     int splitViewTabsNum_; // number of tabs in the first view frame when reopening last tabs
     QStringList tabPaths_;

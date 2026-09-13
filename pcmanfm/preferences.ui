@@ -575,41 +575,51 @@ only if there are more than one tab.</string>
              </widget>
             </item>
             <item row="3" column="0" colspan="2">
+             <widget class="QCheckBox" name="sameTabWidth">
+              <property name="toolTip">
+               <string>Give all tabs equal width instead of sizing them by folder name.</string>
+              </property>
+              <property name="text">
+               <string>Make all tabs have the same width</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0" colspan="2">
              <widget class="QCheckBox" name="rememberWindowSize">
               <property name="text">
                <string>Remember the size of the last closed window</string>
               </property>
              </widget>
             </item>
-            <item row="4" column="0">
+            <item row="5" column="0">
              <widget class="QLabel" name="label_12">
               <property name="text">
                <string>Default width of new windows:</string>
               </property>
              </widget>
             </item>
-            <item row="4" column="1">
+            <item row="5" column="1">
              <widget class="QSpinBox" name="fixedWindowWidth">
               <property name="maximum">
                <number>32768</number>
               </property>
              </widget>
             </item>
-            <item row="5" column="0">
+            <item row="6" column="0">
              <widget class="QLabel" name="label_13">
               <property name="text">
                <string>Default height of new windows:</string>
               </property>
              </widget>
             </item>
-            <item row="5" column="1">
+            <item row="6" column="1">
              <widget class="QSpinBox" name="fixedWindowHeight">
               <property name="maximum">
                <number>32768</number>
               </property>
              </widget>
             </item>
-            <item row="6" column="0" colspan="2">
+            <item row="7" column="0" colspan="2">
              <widget class="QCheckBox" name="reopenLastTabs">
               <property name="text">
                <string>Reopen last window tabs in a new window</string>

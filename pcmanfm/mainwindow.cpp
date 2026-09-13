@@ -67,7 +67,11 @@ ViewFrame::ViewFrame(QWidget* parent):
     tabBar_ = new TabBar;
     tabBar_->setFocusPolicy(Qt::NoFocus);
     stackedWidget_ = new QStackedWidget;
-    vBox->addWidget(tabBar_);
+    QHBoxLayout* tabHBox = new QHBoxLayout;
+    tabHBox->setContentsMargins(6, 0, 6, 0);
+    tabHBox->setSpacing(0);
+    tabHBox->addWidget(tabBar_);
+    vBox->addLayout(tabHBox);
     vBox->addWidget(stackedWidget_, 1);
     setLayout(vBox);
 
@@ -516,6 +520,7 @@ void MainWindow::addViewFrame(const Fm::FilePath& path) {
     viewFrame->getTabBar()->setDetachable(!splitView_); // no tab DND with the split view
     viewFrame->getTabBar()->setTabsClosable(settings.showTabClose());
     viewFrame->getTabBar()->setAutoHide(!settings.alwaysShowTabs());
+    viewFrame->getTabBar()->setSameTabWidth(settings.sameTabWidth());
     ui.viewSplitter->addWidget(viewFrame); // the splitter takes ownership of viewFrame
     if(ui.viewSplitter->count() == 1) {
         activeViewFrame_ = viewFrame;
@@ -740,6 +745,7 @@ int MainWindow::addTabWithPage(TabPage* page, ViewFrame* viewFrame, Fm::FilePath
     tabText.replace(QLatin1Char('\n'), QLatin1Char(' '))
            .replace(QLatin1Char('&'), QLatin1String("&&"));
     viewFrame->getTabBar()->insertTab(index, tabText);
+    viewFrame->getTabBar()->setTabToolTip(index, page->title());
 
     Settings& settings = static_cast<Application*>(qApp)->settings();
     if(settings.switchToNewTab()) {
@@ -1712,6 +1718,7 @@ void MainWindow::onTabPageTitleChanged() {
             tabText.replace(QLatin1Char('\n'), QLatin1Char(' '))
                    .replace(QLatin1Char('&'), QLatin1String("&&"));
             viewFrame->getTabBar()->setTabText(index, tabText);
+            viewFrame->getTabBar()->setTabToolTip(index, tabPage->title());
         }
 
         if(viewFrame == activeViewFrame_) {
@@ -2401,6 +2408,7 @@ void MainWindow::updateFromSettings(Settings& settings) {
         if(ViewFrame* viewFrame = qobject_cast<ViewFrame*>(ui.viewSplitter->widget(i))) {
             viewFrame->getTabBar()->setTabsClosable(settings.showTabClose());
             viewFrame->getTabBar()->setAutoHide(!settings.alwaysShowTabs());
+            viewFrame->getTabBar()->setSameTabWidth(settings.sameTabWidth());
 
             // all tab pages
             int n = viewFrame->getStackedWidget()->count();

@@ -202,6 +202,7 @@ void PreferencesDialog::initUiPage(Settings& settings) {
     ui.alwaysShowTabs->setChecked(settings.alwaysShowTabs());
     ui.showTabClose->setChecked(settings.showTabClose());
     ui.switchToNewTab->setChecked(settings.switchToNewTab());
+    ui.sameTabWidth->setChecked(settings.sameTabWidth());
     ui.reopenLastTabs->setChecked(settings.reopenLastTabs());
     ui.rememberWindowSize->setChecked(settings.rememberWindowSize());
     ui.fixedWindowWidth->setValue(settings.fixedWindowWidth());
@@ -410,6 +411,7 @@ void PreferencesDialog::applyUiPage(Settings& settings) {
     settings.setAlwaysShowTabs(ui.alwaysShowTabs->isChecked());
     settings.setShowTabClose(ui.showTabClose->isChecked());
     settings.setSwitchToNewTab(ui.switchToNewTab->isChecked());
+    settings.setSameTabWidth(ui.sameTabWidth->isChecked());
     settings.setReopenLastTabs(ui.reopenLastTabs->isChecked());
     settings.setRememberWindowSize(ui.rememberWindowSize->isChecked());
     settings.setFixedWindowWidth(ui.fixedWindowWidth->value());

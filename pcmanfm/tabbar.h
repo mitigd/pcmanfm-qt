@@ -42,6 +42,11 @@ public:
         dragStartPosition_ = QPoint();
     }
 
+    void setSameTabWidth(bool sameTabWidth);
+    bool sameTabWidth() const {
+        return sameTabWidth_;
+    }
+
     // An object property used for knowing whether
     // a tab is dropped into one of our windows:
     static const char* tabDropped;
@@ -57,11 +62,13 @@ protected:
     QSize tabSizeHint (int index) const override;
     QSize minimumTabSizeHint (int index) const override;
     void tabInserted(int index) override;
+    bool event(QEvent *event) override;
 
 private:
     QPoint dragStartPosition_;
     bool dragStarted_;
     bool detachable_;
+    bool sameTabWidth_;
 };
 
 }

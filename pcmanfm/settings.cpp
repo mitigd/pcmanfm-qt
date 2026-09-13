@@ -88,6 +88,7 @@ Settings::Settings():
     alwaysShowTabs_(true),
     showTabClose_(true),
     switchToNewTab_(false),
+    sameTabWidth_(false),
     reopenLastTabs_(false),
     splitViewTabsNum_(0),
     rememberWindowSize_(true),
@@ -357,6 +358,7 @@ bool Settings::loadFile(QString filePath) {
     alwaysShowTabs_ = settings.value(QStringLiteral("AlwaysShowTabs"), true).toBool();
     showTabClose_ = settings.value(QStringLiteral("ShowTabClose"), true).toBool();
     switchToNewTab_ = settings.value(QStringLiteral("SwitchToNewTab"), false).toBool();
+    sameTabWidth_ = settings.value(QStringLiteral("SameTabWidth"), false).toBool();
     reopenLastTabs_ = settings.value(QStringLiteral("ReopenLastTabs"), false).toBool();
     tabPaths_ = settings.value(QStringLiteral("TabPaths")).toStringList();
     splitViewTabsNum_ = settings.value(QStringLiteral("SplitViewTabsNum")).toInt();
@@ -527,6 +529,7 @@ bool Settings::saveFile(QString filePath) {
     settings.setValue(QStringLiteral("AlwaysShowTabs"), alwaysShowTabs_);
     settings.setValue(QStringLiteral("ShowTabClose"), showTabClose_);
     settings.setValue(QStringLiteral("SwitchToNewTab"), switchToNewTab_);
+    settings.setValue(QStringLiteral("SameTabWidth"), sameTabWidth_);
     settings.setValue(QStringLiteral("ReopenLastTabs"), reopenLastTabs_);
     settings.setValue(QStringLiteral("TabPaths"), tabPaths_);
     settings.setValue(QStringLiteral("SplitViewTabsNum"), splitViewTabsNum_);

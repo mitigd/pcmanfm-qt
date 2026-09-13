@@ -21,6 +21,8 @@
 #include "tabbar.h"
 #include <QPointer>
 #include <QMouseEvent>
+#include <QHelpEvent>
+#include <QToolTip>
 #include <QApplication>
 #include <QDrag>
 #include <QMimeData>
@@ -33,7 +35,8 @@ const char* TabBar::tabDropped = "_pcmanfm_tab_dropped";
 TabBar::TabBar(QWidget *parent):
     QTabBar(parent),
     dragStarted_(false),
-    detachable_(true)
+    detachable_(true),
+    sameTabWidth_(false)
 {
     setElideMode(Qt::ElideRight); // works with minimumTabSizeHint()
 }
@@ -153,8 +156,39 @@ void TabBar::dragEnterEvent(QDragEnterEvent *event) {
     }
 }
 
+void TabBar::setSameTabWidth(bool sameTabWidth) {
+    if(sameTabWidth_ != sameTabWidth) {
+        sameTabWidth_ = sameTabWidth;
+        Qt::TextElideMode m = elideMode();
+        setElideMode(m == Qt::ElideRight ? Qt::ElideNone : Qt::ElideRight);
+        setElideMode(m);
+        updateGeometry();
+    }
+}
+
 // Limit the size of large tabs to 2/3 of the width of the tabbar.
 QSize TabBar::tabSizeHint(int index) const {
+    if(sameTabWidth_) {
+        switch (shape()) {
+        case QTabBar::RoundedWest:
+        case QTabBar::TriangularWest:
+        case QTabBar::RoundedEast:
+        case QTabBar::TriangularEast: {
+            int h = std::max(220, fontMetrics().averageCharWidth() * 28);
+            if(height() > 0) {
+                h = std::min(h, 2 * height() / 3);
+            }
+            return QSize(QTabBar::tabSizeHint(index).width(), h);
+        }
+        default: {
+            int w = std::max(220, fontMetrics().averageCharWidth() * 28);
+            if(width() > 0) {
+                w = std::min(w, 2 * width() / 3);
+            }
+            return QSize(w, QTabBar::tabSizeHint(index).height());
+        }
+        }
+    }
     switch (shape()) {
     case QTabBar::RoundedWest:
     case QTabBar::TriangularWest:
@@ -170,6 +204,21 @@ QSize TabBar::tabSizeHint(int index) const {
 
 // Set minimumTabSizeHint to tabSizeHint to keep tabs from shrinking with eliding.
 QSize TabBar::minimumTabSizeHint(int index) const {
+    if(sameTabWidth_) {
+        switch (shape()) {
+        case QTabBar::RoundedWest:
+        case QTabBar::TriangularWest:
+        case QTabBar::RoundedEast:
+        case QTabBar::TriangularEast: {
+            int minH = std::max(120, fontMetrics().averageCharWidth() * 15);
+            return QSize(tabSizeHint(index).width(), std::min(minH, tabSizeHint(index).height()));
+        }
+        default: {
+            int minW = std::max(120, fontMetrics().averageCharWidth() * 15);
+            return QSize(std::min(minW, tabSizeHint(index).width()), tabSizeHint(index).height());
+        }
+        }
+    }
     return tabSizeHint(index);
 }
 
@@ -181,6 +230,25 @@ void TabBar::tabInserted(int index) {
     if(!autoHide() && index == 0 && count() == 1) {
         updateGeometry();
     }
+}
+
+bool TabBar::event(QEvent *event) {
+    if (event->type() == QEvent::ToolTip) {
+        QHelpEvent *helpEvent = static_cast<QHelpEvent *>(event);
+        int index = tabAt(helpEvent->pos());
+        if (index != -1) {
+            QString tip = tabToolTip(index);
+            if (tip.isEmpty()) {
+                tip = tabText(index);
+                tip.replace(QLatin1String("&&"), QLatin1String("&"));
+            }
+            if (!tip.isEmpty()) {
+                QToolTip::showText(helpEvent->globalPos(), tip, this, tabRect(index));
+                return true;
+            }
+        }
+    }
+    return QTabBar::event(event);
 }
 
 }
