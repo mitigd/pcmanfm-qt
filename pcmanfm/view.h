@@ -23,6 +23,9 @@
 
 #include <libfm-qt6/folderview.h>
 #include <libfm-qt6/core/filepath.h>
+#include <QPointer>
+
+class QRubberBand;
 
 
 namespace Fm {
@@ -62,14 +65,21 @@ protected:
     virtual void prepareFolderMenu(Fm::FolderMenu* menu) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
+    void childDragMoveEvent(QDragMoveEvent* event) override;
+    void childDropEvent(QDropEvent* event) override;
 
 private:
     void launchFiles(Fm::FileInfoList files, bool inNewTabs = false);
     void openFolderAndSelectFile(const std::shared_ptr<const Fm::FileInfo>& fileInfo, bool inNewTab = false);
 
     bool leftPressAfterName_ = false;
+    bool marqueeActive_ = false;
     QPoint leftPressPoint_;
+    int pressScrollX_ = 0;
+    int pressScrollY_ = 0;
+    Qt::KeyboardModifiers leftPressModifiers_ = Qt::NoModifier;
     QItemSelection savedSelection_;
+    QPointer<QRubberBand> rubberBand_;
 
 };
 
