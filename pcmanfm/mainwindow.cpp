@@ -36,6 +36,9 @@
 #include <QMimeData>
 #include <QStandardPaths>
 #include <QClipboard>
+#include <QTreeView>
+#include <QHeaderView>
+#include <QScrollBar>
 #include <QDebug>
 
 #include "tabpage.h"
@@ -200,6 +203,9 @@ MainWindow::MainWindow(Fm::FilePath path):
     connect(ui.rightSidePane, &Fm::SidePane::openFolderInTerminalRequested, this, &MainWindow::onSidePaneOpenFolderInTerminalRequested);
     connect(ui.rightSidePane, &Fm::SidePane::createNewFolderRequested, this, &MainWindow::onSidePaneCreateNewFolderRequested);
     connect(ui.rightSidePane, &Fm::SidePane::hiddenPlaceSet, this, &MainWindow::onSettingHiddenPlace);
+
+    setupDirTree(ui.sidePane);
+    setupDirTree(ui.rightSidePane);
 
     // detect change of splitter position
     connect(ui.splitter, &QSplitter::splitterMoved, this, &MainWindow::onSplitterMoved);
@@ -1629,10 +1635,23 @@ void MainWindow::updateUIForCurrentPage(bool setFocus) {
         // update side panes
         ui.sidePane->setCurrentPath(tabPage->path());
         ui.sidePane->setShowHidden(tabPage->showHidden());
+        setupDirTree(ui.sidePane);
         if(ui.rightSidePane->isVisible()) {
             ui.rightSidePane->setCurrentPath(tabPage->path());
             ui.rightSidePane->setShowHidden(tabPage->showHidden());
+            setupDirTree(ui.rightSidePane);
         }
+
+        QTimer::singleShot(50, this, [this] {
+            if(auto treeView = qobject_cast<QTreeView*>(ui.sidePane->view())) {
+                scrollDirTreeToCurrent(treeView);
+            }
+            if(ui.rightSidePane->isVisible()) {
+                if(auto treeView = qobject_cast<QTreeView*>(ui.rightSidePane->view())) {
+                    scrollDirTreeToCurrent(treeView);
+                }
+            }
+        });
 
         // update back/forward/up toolbar buttons
         ui.actionGoUp->setEnabled(tabPage->canUp());
@@ -1838,6 +1857,8 @@ void MainWindow::onSidePaneModeChanged(Fm::SidePane::Mode mode) {
     if(!static_cast<Application*>(qApp)->settings().dualSidePanes()) {
         static_cast<Application*>(qApp)->settings().setSidePaneMode(mode);
     }
+    setupDirTree(ui.sidePane);
+    setupDirTree(ui.rightSidePane);
 }
 
 void MainWindow::onSettingHiddenPlace(const QString& str, bool hide) {
@@ -2349,6 +2370,114 @@ void MainWindow::updateSidePanes() {
             sizes << left << qMax(50, total - left) << 0;
             ui.splitter->setSizes(sizes);
         }
+    }
+
+    setupDirTree(ui.sidePane);
+    setupDirTree(ui.rightSidePane);
+}
+
+void MainWindow::setupDirTree(Fm::SidePane* sidePane) {
+    if(!sidePane) {
+        return;
+    }
+    if(QTreeView* treeView = qobject_cast<QTreeView*>(sidePane->view())) {
+        if(treeView->selectionModel()) {
+            connect(treeView->selectionModel(), &QItemSelectionModel::selectionChanged,
+                    this, &MainWindow::onDirTreeSelectionChanged, Qt::UniqueConnection);
+        }
+    }
+}
+
+void MainWindow::onDirTreeSelectionChanged() {
+    auto selectionModel = qobject_cast<QItemSelectionModel*>(sender());
+    if(!selectionModel) {
+        return;
+    }
+    QTreeView* treeView = nullptr;
+    if(auto sideView = qobject_cast<QTreeView*>(ui.sidePane->view())) {
+        if(sideView->selectionModel() == selectionModel) {
+            treeView = sideView;
+        }
+    }
+    if(!treeView && ui.rightSidePane) {
+        if(auto rightView = qobject_cast<QTreeView*>(ui.rightSidePane->view())) {
+            if(rightView->selectionModel() == selectionModel) {
+                treeView = rightView;
+            }
+        }
+    }
+    if(treeView) {
+        QTimer::singleShot(0, this, [this, treeView] {
+            scrollDirTreeToCurrent(treeView);
+        });
+    }
+}
+
+void MainWindow::scrollDirTreeToCurrent(QTreeView* treeView) {
+    if(!treeView || !treeView->isVisible() || !treeView->selectionModel()) {
+        return;
+    }
+    QModelIndexList selected = treeView->selectionModel()->selectedRows();
+    if(selected.isEmpty()) {
+        selected = treeView->selectionModel()->selectedIndexes();
+        if(selected.isEmpty()) {
+            return;
+        }
+    }
+    QModelIndex index = selected.first();
+    if(!index.isValid()) {
+        return;
+    }
+
+    // Ensure the tree view column size accommodates the item and its indentation
+    treeView->resizeColumnToContents(0);
+
+    // 1. Vertical scrolling:
+    // If the item is not within a comfortable central band of the viewport,
+    // scroll so it is positioned at the center (giving visual context of siblings and children).
+    QRect rect = treeView->visualRect(index);
+    int viewportHeight = treeView->viewport()->height();
+    if(rect.isEmpty() || rect.top() < 0.15 * viewportHeight || rect.bottom() > 0.85 * viewportHeight) {
+        treeView->scrollTo(index, QAbstractItemView::PositionAtCenter);
+    }
+    else {
+        treeView->scrollTo(index, QAbstractItemView::EnsureVisible);
+    }
+
+    // 2. Horizontal scrolling:
+    // Re-query visual rect after vertical scroll
+    rect = treeView->visualRect(index);
+    if(!rect.isValid() || rect.isEmpty()) {
+        return;
+    }
+
+    QScrollBar* hBar = treeView->horizontalScrollBar();
+    if(!hBar) {
+        return;
+    }
+
+    int currentH = hBar->value();
+    int viewportWidth = treeView->viewport()->width();
+    int indent = treeView->indentation();
+
+    int itemLeft = rect.left() + currentH;
+    int itemWidth = std::max(rect.width(), treeView->sizeHintForIndex(index).width());
+    int itemRight = itemLeft + itemWidth;
+    int expanderLeft = std::max(0, itemLeft - indent);
+
+    int targetH = currentH;
+
+    if(expanderLeft < currentH) {
+        targetH = std::max(0, expanderLeft - 4);
+    }
+    else if(itemRight > currentH + viewportWidth) {
+        int needed = itemRight - viewportWidth + 16;
+        targetH = std::min(needed, expanderLeft);
+    }
+
+    targetH = std::max(0, std::min(targetH, hBar->maximum()));
+    if(targetH != currentH) {
+        hBar->setValue(targetH);
     }
 }
 

@@ -43,6 +43,8 @@ class PathEdit;
 class PathBar;
 }
 
+class QTreeView;
+
 namespace PCManFM {
 
 class ViewFrame : public QFrame {
@@ -216,6 +218,7 @@ protected Q_SLOTS:
     void on_actionSidePane_triggered(bool check);
     void onSplitterMoved(int pos, int index);
     void onResetFocus();
+    void onDirTreeSelectionChanged();
 
     void onBackForwardContextMenu(QPoint pos);
 
@@ -262,6 +265,8 @@ private:
     void updateSelectedActions();
     void updateStatusBarForCurrentPage();
     void updateSidePanes();
+    void setupDirTree(Fm::SidePane* sidePane);
+    void scrollDirTreeToCurrent(QTreeView* treeView);
     void setRTLIcons(bool isRTL);
     void createPathBar(bool usePathButtons);
     void addViewFrame(const Fm::FilePath& path);
