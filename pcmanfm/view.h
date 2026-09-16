@@ -57,13 +57,19 @@ protected Q_SLOTS:
     void onSearch();
 
 protected:
-    virtual void onFileClicked(int type, const std::shared_ptr<const Fm::FileInfo>& fileInfo);
-    virtual void prepareFileMenu(Fm::FileMenu* menu);
-    virtual void prepareFolderMenu(Fm::FolderMenu* menu);
+    virtual void onFileClicked(int type, const std::shared_ptr<const Fm::FileInfo>& fileInfo) override;
+    virtual void prepareFileMenu(Fm::FileMenu* menu) override;
+    virtual void prepareFolderMenu(Fm::FolderMenu* menu) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
 
 private:
     void launchFiles(Fm::FileInfoList files, bool inNewTabs = false);
     void openFolderAndSelectFile(const std::shared_ptr<const Fm::FileInfo>& fileInfo, bool inNewTab = false);
+
+    bool leftPressAfterName_ = false;
+    QPoint leftPressPoint_;
+    QItemSelection savedSelection_;
 
 };
 

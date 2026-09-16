@@ -27,6 +27,11 @@
 #include "mainwindow.h"
 #include "launcher.h"
 #include <QAction>
+#include <QHeaderView>
+#include <QTreeView>
+#include <QMouseEvent>
+#include <QContextMenuEvent>
+#include <QApplication>
 
 namespace PCManFM {
 
@@ -245,6 +250,81 @@ void View::openFolderAndSelectFile(const std::shared_ptr<const Fm::FileInfo>& fi
         paths.emplace_back(fileInfo->path());
         win->openFolderAndSelectFiles(std::move(paths), inNewTab);
     }
+}
+
+bool View::eventFilter(QObject* watched, QEvent* event) {
+    if(childView() && watched == childView()->viewport() && viewMode() == DetailedListMode) {
+        if(QTreeView* treeView = qobject_cast<QTreeView*>(childView())) {
+            switch(event->type()) {
+            case QEvent::MouseButtonPress: {
+                QMouseEvent* me = static_cast<QMouseEvent*>(event);
+                if(me->button() == Qt::LeftButton) {
+                    int logicalCol = treeView->header()->logicalIndexAt(me->position().toPoint().x());
+                    if(logicalCol != Fm::FolderModel::ColumnFileName) {
+                        leftPressAfterName_ = true;
+                        leftPressPoint_ = me->position().toPoint();
+                        if(treeView->selectionModel()) {
+                            savedSelection_ = treeView->selectionModel()->selection();
+                        }
+                    }
+                    else {
+                        leftPressAfterName_ = false;
+                    }
+                }
+                break;
+            }
+            case QEvent::MouseMove: {
+                if(leftPressAfterName_) {
+                    QMouseEvent* me = static_cast<QMouseEvent*>(event);
+                    if((me->position().toPoint() - leftPressPoint_).manhattanLength() > QApplication::startDragDistance()) {
+                        leftPressAfterName_ = false; // Dragging started; marquee selection takes over
+                    }
+                }
+                break;
+            }
+            case QEvent::MouseButtonRelease: {
+                QMouseEvent* me = static_cast<QMouseEvent*>(event);
+                if(me->button() == Qt::LeftButton && leftPressAfterName_) {
+                    leftPressAfterName_ = false;
+                    if(me->modifiers() == Qt::NoModifier) {
+                        treeView->clearSelection();
+                        treeView->setCurrentIndex(QModelIndex());
+                    }
+                    else if((me->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) && treeView->selectionModel()) {
+                        treeView->selectionModel()->select(savedSelection_, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+                    }
+                    return true; // Consume event to prevent activation and keep selection cleared
+                }
+                break;
+            }
+            default:
+                break;
+            }
+        }
+    }
+    return Fm::FolderView::eventFilter(watched, event);
+}
+
+void View::contextMenuEvent(QContextMenuEvent* event) {
+    if(event->reason() == QContextMenuEvent::Mouse && viewMode() == DetailedListMode) {
+        if(QTreeView* treeView = qobject_cast<QTreeView*>(childView())) {
+            QPoint viewport_pos = treeView->viewport()->mapFromGlobal(event->globalPos());
+            int logicalCol = treeView->header()->logicalIndexAt(viewport_pos.x());
+            if(logicalCol != Fm::FolderModel::ColumnFileName) {
+                // Clicked to the right after the name category: show context menu for current directory
+                treeView->clearSelection();
+                treeView->setCurrentIndex(QModelIndex());
+                if(folderInfo()) {
+                    Fm::FolderMenu* folderMenu = new Fm::FolderMenu(this, this);
+                    prepareFolderMenu(folderMenu);
+                    folderMenu->exec(event->globalPos());
+                    delete folderMenu;
+                }
+                return;
+            }
+        }
+    }
+    Fm::FolderView::contextMenuEvent(event);
 }
 
 } // namespace PCManFM
